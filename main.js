@@ -9,6 +9,8 @@
 
   const isTouch = matchMedia("(hover: none)").matches;
   const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  // téléphones / tablettes : effets allégés
+  const lowPower = isTouch || (Math.min(screen.width, screen.height) || 9999) < 768;
 
   // Position des poissons dans chaque image (uv texture, y vers le haut)
   const FISH_1 = [0.45, 0.48];
@@ -148,10 +150,15 @@
       }
 
       // aberration chromatique : chaque canal se réfracte un peu différemment
+      // (3 échantillons seulement là où une lentille dévie la lumière, 1 ailleurs)
       vec3 col;
-      col.r = scene(uv+off*(1.+cs), bias).r;
-      col.g = scene(uv+off, bias).g;
-      col.b = scene(uv+off*(1.-cs), bias).b;
+      if(dot(off, off) < 1e-10){
+        col = scene(uv, bias);
+      } else {
+        col.r = scene(uv+off*(1.+cs), bias).r;
+        col.g = scene(uv+off, bias).g;
+        col.b = scene(uv+off*(1.-cs), bias).b;
+      }
 
       // --- bulle-portail : un autre monde vu au travers ---
       if(uPortal.z > .001){
@@ -283,17 +290,42 @@
     });
   }
 
+  // Résolution de rendu adaptative : on part bas sur mobile, et on ajuste
+  // selon la fluidité mesurée (les images sont douces, la perte est invisible).
+  const dpr = window.devicePixelRatio || 1;
+  const Q = {
+    max: Math.min(dpr, lowPower ? 1.25 : 1.75),
+    min: lowPower ? 0.6 : 0.85,
+    scale: Math.min(dpr, lowPower ? 1 : 1.75),
+    acc: 0, n: 0, good: 0,
+  };
   let W = 0, H = 0;
   function resize() {
-    const dpr = Math.min(window.devicePixelRatio || 1, 1.75);
     W = window.innerWidth;
     H = window.innerHeight;
-    canvas.width = Math.round(W * dpr);
-    canvas.height = Math.round(H * dpr);
+    canvas.width = Math.round(W * Q.scale);
+    canvas.height = Math.round(H * Q.scale);
     gl.viewport(0, 0, canvas.width, canvas.height);
   }
   resize();
   window.addEventListener("resize", resize);
+
+  function adaptQuality(ms) {
+    if (ms > 100) return; // onglet en arrière-plan : mesure non significative
+    Q.acc += ms;
+    if (++Q.n < 45) return;
+    const avg = Q.acc / Q.n;
+    Q.acc = Q.n = 0;
+    if (avg > 1000 / 48 && Q.scale > Q.min) {
+      Q.scale = Math.max(Q.min, Q.scale - 0.15);
+      Q.good = 0;
+      resize();
+    } else if (avg < 1000 / 58 && Q.scale < Q.max && ++Q.good >= 4) {
+      Q.scale = Math.min(Q.max, Q.scale + 0.1);
+      Q.good = 0;
+      resize();
+    }
+  }
 
   // =====================================================================
   //  Bulles ambiantes (simulées en JS, réfractées dans le shader)
@@ -311,6 +343,7 @@
     return b;
   }
   const bubData = new Float32Array(N_BUB * 4);
+  const activeBubbles = lowPower ? 5 : N_BUB;
 
   // =====================================================================
   //  Curseur-lentille
@@ -372,6 +405,69 @@
   const liquidMap = document.getElementById("liquid-map");
   const liquidNoise = document.getElementById("liquid-noise");
   let lastLiquid = -1;
+  const liquidEls = [...document.querySelectorAll(".liquid")];
+
+  // Bureau : filtre SVG (rendu CPU, coûteux) appliqué seulement pendant qu'il
+  // déforme réellement un titre visible ; le bruit n'est animé que dans ce cas.
+  function liquidFilter(liq, time) {
+    const on = liq > 0.5;
+    let any = false;
+    for (const el of liquidEls) {
+      const vis = on && gsap.getProperty(el, "opacity") > 0.02;
+      el.classList.toggle("is-liquid", vis);
+      any = any || vis;
+    }
+    if (!any) return;
+    if (liq !== lastLiquid) {
+      liquidMap.setAttribute("scale", liq);
+      lastLiquid = liq;
+    }
+    liquidNoise.setAttribute("baseFrequency", `${0.008 + Math.sin(time) * 0.002} ${0.03 + Math.cos(time * 0.8) * 0.006}`);
+  }
+
+  // Mobile : ondulation lettre par lettre en transform (GPU, quasi gratuite)
+  const letters = lowPower ? liquidEls.flatMap(splitLetters) : [];
+  let lettersMoving = false;
+  function waveLetters(liq, time) {
+    const amp = Math.min(liq / 140, 1);
+    if (amp < 0.01) {
+      if (lettersMoving) { letters.forEach((l) => (l.style.transform = "")); lettersMoving = false; }
+      return;
+    }
+    lettersMoving = true;
+    letters.forEach((l, i) => {
+      const y = Math.sin(i * 0.7 + time * 4) * amp * 0.18;
+      const r = Math.sin(i * 1.3 + time * 3) * amp * 9;
+      l.style.transform = `translateY(${y}em) rotate(${r}deg) scaleY(${1 + amp * 0.15 * Math.sin(i + time * 5)})`;
+    });
+  }
+  function splitLetters(el) {
+    const out = [];
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    const nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    nodes.forEach((node) => {
+      // lettres groupées par mot (span insécable) : sinon chaque lettre devient
+      // un point de coupure et le titre s'empile verticalement
+      const frag = document.createDocumentFragment();
+      node.textContent.split(/(\s+)/).forEach((part) => {
+        if (!part) return;
+        if (/^\s+$/.test(part)) { frag.appendChild(document.createTextNode(part)); return; }
+        const word = document.createElement("span");
+        word.className = "wd";
+        for (const ch of part) {
+          const s = document.createElement("span");
+          s.className = "ch";
+          s.textContent = ch;
+          word.appendChild(s);
+          out.push(s);
+        }
+        frag.appendChild(word);
+      });
+      node.replaceWith(frag);
+    });
+    return out;
+  }
   const gaugeVal = document.querySelector(".gauge-val");
   const gaugeFill = document.querySelector(".gauge-fill");
   const gaugeFish = document.querySelector(".gauge-fish");
@@ -380,6 +476,7 @@
   let prev = t0;
 
   function frame(now) {
+    adaptQuality(now - prev);
     const dt = Math.min((now - prev) / 1000, 0.05);
     prev = now;
     const time = (now - t0) / 1000;
@@ -396,7 +493,7 @@
       if (b.y - b.r > 1.15 && !b.popping) spawnBubble(b, false);
       bubData[i * 4] = b.x * a;
       bubData[i * 4 + 1] = b.y;
-      bubData[i * 4 + 2] = b.r * b.scale * S.bubbles;
+      bubData[i * 4 + 2] = i < activeBubbles ? b.r * b.scale * S.bubbles : 0;
       bubData[i * 4 + 3] = b.k;
     }
 
@@ -425,11 +522,8 @@
 
     // titres liquides
     const liq = Math.round((S.liquid + wob * 22) * 10) / 10;
-    if (liq !== lastLiquid) {
-      liquidMap.setAttribute("scale", liq);
-      lastLiquid = liq;
-    }
-    if (liq > 0.5) liquidNoise.setAttribute("baseFrequency", `${0.008 + Math.sin(time) * 0.002} ${0.03 + Math.cos(time * 0.8) * 0.006}`);
+    if (lowPower) waveLetters(liq, time);
+    else liquidFilter(liq, time);
 
     // jauge de profondeur
     const m = Math.round(S.meters);
@@ -503,7 +597,9 @@
     sTo(".s-legend", 0.9, { shade: 0.1, duration: 0.1 });
     scrub(".s-legend")
       .fromTo(".s-legend .kicker", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.1 }, 0.02)
-      .fromTo(".words .w", { opacity: 0.1, y: 18, filter: "blur(6px)" }, { opacity: 1, y: 0, filter: "blur(0px)", stagger: 0.016, duration: 0.08 }, 0.08)
+      .fromTo(".words .w",
+        lowPower ? { opacity: 0.1, y: 18 } : { opacity: 0.1, y: 18, filter: "blur(6px)" },
+        lowPower ? { opacity: 1, y: 0, stagger: 0.016, duration: 0.08 } : { opacity: 1, y: 0, filter: "blur(0px)", stagger: 0.016, duration: 0.08 }, 0.08)
       .to([".words", ".s-legend .kicker"], { opacity: 0, y: -40, duration: 0.08 }, 0.9);
 
     // --- II · La Bulle : on traverse la bulle vers l'autre monde ---
@@ -606,7 +702,7 @@
     onUpdate: () => (numEl.textContent = String(Math.round(load.v)).padStart(3, "0")),
   });
 
-  Promise.all([loadTexture("assets/jardin-1-16x9-hd.webp", 0), loadTexture("assets/jardin-2.png", 1), document.fonts.ready])
+  Promise.all([loadTexture("assets/jardin-1-16x9-hd.webp", 0), loadTexture("assets/jardin-2.jpg", 1), document.fonts.ready])
     .then(() => {
       counter.kill();
       requestAnimationFrame(frame);

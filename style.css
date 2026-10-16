@@ -167,7 +167,10 @@ main { position: relative; z-index: 2; }
   text-shadow: 0 1px 14px rgba(0, 20, 40, 0.5);
 }
 
-.liquid { filter: url(#liquid); }
+/* filtre SVG activé par main.js uniquement pendant la déformation */
+.liquid.is-liquid { filter: url(#liquid); }
+.wd { display: inline-block; white-space: nowrap; }
+.ch { display: inline-block; }
 
 /* intro */
 .intro-line {
@@ -189,7 +192,7 @@ main { position: relative; z-index: 2; }
   text-shadow: 0 4px 60px rgba(0, 30, 60, 0.35);
   opacity: 0;
 }
-.title span { display: block; }
+.title > span { display: block; }
 .title-a { font-size: clamp(56px, 11vw, 190px); }
 .title-b { font-size: clamp(90px, 20vw, 360px); color: #fff; }
 .title-sub {
@@ -228,7 +231,7 @@ main { position: relative; z-index: 2; }
   text-align: center;
   text-wrap: balance;
 }
-.words .w { display: inline-block; opacity: 0.12; will-change: opacity, transform, filter; }
+.words .w { display: inline-block; opacity: 0.12; will-change: opacity, transform; }
 
 /* portal */
 .portal-title {
@@ -374,7 +377,9 @@ main { position: relative; z-index: 2; }
   .depth-lines { gap: 4vh; }
   .depth-lines p { font-size: min(4vw, 9vh); }
   .depth-lines span { margin-bottom: 6px; }
-  .card { height: 82vh; padding-top: 44px; border-radius: 120px 120px 22px 22px; }
+  .card { height: 76vh; padding-top: 44px; border-radius: 120px 120px 22px 22px; }
+  .card:nth-child(odd) { transform: translateY(3vh); }
+  .card:nth-child(even) { transform: translateY(-3vh); }
   .card-n { top: 18px; }
   .card-v { font-size: 40px; margin: 4px 0 8px; }
   .card p { font-size: 13px; }
@@ -382,4 +387,16 @@ main { position: relative; z-index: 2; }
   .portal-title { top: 20vh; }
   .portal-sub { bottom: 8vh; }
   .foot { bottom: 3vh; }
+}
+
+/* mobile : verre imité sans backdrop-filter (très coûteux pendant le défilement) */
+@media (hover: none), (max-width: 720px) {
+  .glass {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background:
+      linear-gradient(150deg, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.1) 55%),
+      rgba(14, 44, 70, 0.62);
+  }
+  .card::after { display: none; }
 }
