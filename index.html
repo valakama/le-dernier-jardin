@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Le Dernier Jardin</title>
+  <meta name="description" content="Une légende : quelque part sous la mer, un seul poisson rouge garde les dernières fleurs du monde." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter+Tight:wght@300;400;500&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- Filtre « eau » pour les grands titres : déplacement piloté par la vitesse de scroll -->
+  <svg class="defs" aria-hidden="true" width="0" height="0">
+    <filter id="liquid" x="-10%" y="-30%" width="120%" height="160%">
+      <feTurbulence id="liquid-noise" type="fractalNoise" baseFrequency="0.008 0.03" numOctaves="2" seed="4" result="n" />
+      <feDisplacementMap id="liquid-map" in="SourceGraphic" in2="n" scale="0" xChannelSelector="R" yChannelSelector="G" />
+    </filter>
+  </svg>
+
+  <div class="loader" aria-hidden="true">
+    <div class="loader-dot"></div>
+    <div class="loader-num">000</div>
+    <div class="loader-label">Descente en cours</div>
+  </div>
+
+  <canvas id="gl" aria-hidden="true"></canvas>
+
+  <header class="hud">
+    <a href="#top" class="brand" data-hover>Le Dernier <em>Jardin</em></a>
+  </header>
+
+  <aside class="gauge" aria-hidden="true">
+    <span class="gauge-label">Profondeur</span>
+    <div class="gauge-track"><div class="gauge-fill"></div><div class="gauge-fish"></div></div>
+    <span class="gauge-val">−000 m</span>
+  </aside>
+
+  <div class="cursor" aria-hidden="true"></div>
+
+  <main id="top">
+    <!-- 00 · PROLOGUE -->
+    <section class="s s-intro" data-num="00" data-name="Prologue">
+      <div class="pin">
+        <p class="intro-line">Il existe, dit-on,<br />un jardin sous les eaux.</p>
+        <h1 class="title liquid">
+          <span class="title-a">Le Dernier</span>
+          <span class="title-b"><em>Jardin</em></span>
+        </h1>
+        <p class="title-sub">Une légende en cinq chapitres</p>
+        <div class="scroll-hint"><span>Défiler pour plonger</span><i></i></div>
+      </div>
+    </section>
+
+    <!-- I · LA LÉGENDE -->
+    <section class="s s-legend" data-num="I" data-name="La Légende">
+      <div class="pin">
+        <span class="kicker">Chapitre I — La Légende</span>
+        <p class="words">Quand la mer monta pour la dernière fois, elle emporta les villes, les routes et jusqu’aux noms des choses. Elle épargna pourtant un jardin. On raconte qu’il fleurit encore, très loin sous la surface, et qu’un seul poisson veille sur lui.</p>
+      </div>
+    </section>
+
+    <!-- II · LA BULLE -->
+    <section class="s s-portal" data-num="II" data-name="La Bulle">
+      <div class="pin">
+        <span class="kicker">Chapitre II — La Bulle</span>
+        <h2 class="portal-title">Au cœur du jardin flotte une bulle<br /><em>plus ancienne que la mer.</em></h2>
+        <p class="portal-sub">Regardez au travers. Puis entrez.</p>
+      </div>
+    </section>
+
+    <!-- III · LE GARDIEN -->
+    <section class="s s-guardian" data-num="III" data-name="Le Gardien">
+      <div class="pin">
+        <svg class="stems stems-l" viewBox="0 0 200 1000" preserveAspectRatio="none" aria-hidden="true"></svg>
+        <svg class="stems stems-r" viewBox="0 0 200 1000" preserveAspectRatio="none" aria-hidden="true"></svg>
+        <div class="track">
+          <div class="track-intro">
+            <span class="kicker">Chapitre III — Le Gardien</span>
+            <h2>Carassius<br /><em>hortensis</em></h2>
+            <p>Fiche reconstituée d’après les récits de plongeurs qui affirment l’avoir croisé. Aucun ne s’accorde sur la profondeur.</p>
+          </div>
+          <article class="card glass" data-hover>
+            <span class="card-n">01</span>
+            <span class="card-k">Taille</span>
+            <strong class="card-v">11 <small>cm</small></strong>
+            <p>Pas plus grand qu’une main d’enfant. Les témoins jurent pourtant qu’il emplit tout le champ de vision.</p>
+          </article>
+          <article class="card glass" data-hover>
+            <span class="card-n">02</span>
+            <span class="card-k">Âge estimé</span>
+            <strong class="card-v">3 000 <small>ans</small></strong>
+            <p>Il aurait vu la mer monter. Ses écailles portent des anneaux, comme le bois des arbres.</p>
+          </article>
+          <article class="card glass" data-hover>
+            <span class="card-n">03</span>
+            <span class="card-k">Régime</span>
+            <strong class="card-v">Pétales</strong>
+            <p>Uniquement ceux qui tombent d’eux-mêmes. Il n’a jamais arraché une fleur.</p>
+          </article>
+          <article class="card glass" data-hover>
+            <span class="card-n">04</span>
+            <span class="card-k">Respiration</span>
+            <strong class="card-v">Bulles</strong>
+            <p>Chaque bulle qu’il libère contiendrait le souvenir d’un jardin d’en haut, et elle remonte pour aller le rendre.</p>
+          </article>
+          <article class="card glass" data-hover>
+            <span class="card-n">05</span>
+            <span class="card-k">Population</span>
+            <strong class="card-v">1</strong>
+            <p>Un seul individu connu. Statut de conservation : <em>légendaire</em>.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- IV · LA PROFONDEUR -->
+    <section class="s s-depth" data-num="IV" data-name="La Profondeur">
+      <div class="pin">
+        <span class="kicker">Chapitre IV — La Profondeur</span>
+        <div class="depth-lines">
+          <p><span>−150 m</span>Les couleurs s’éteignent une à une.</p>
+          <p><span>−280 m</span>Seul l’orange résiste.</p>
+          <p class="depth-last"><span>−400 m</span>Il vous a vu.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- V · LA REMONTÉE -->
+    <section class="s s-final" data-num="V" data-name="La Remontée">
+      <div class="pin">
+        <span class="kicker">Chapitre V — La Remontée</span>
+        <h2 class="final-title liquid">Ce qui est aimé<br /><em>ne coule jamais.</em></h2>
+        <footer class="foot">
+          <span>Le Dernier Jardin — une légende inventée, 2026</span>
+          <button class="to-top glass" data-hover>Remonter à la surface ↑</button>
+        </footer>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+  <script src="https://unpkg.com/lenis@1.1.13/dist/lenis.min.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>
